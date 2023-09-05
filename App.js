@@ -1,20 +1,36 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Alert, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import TimerSettings from "./components/TimerSettings/TimerSettings";
+import PomodoroCycle from "./components/PomodoroCycle/PomodoroCycle";
 import { styles } from "./AppStyles";
 
 const PomodoroTimer = () => {
+  //Timer related states
   const [minutes, setMinutes] = useState(25);
   const [seconds, setSeconds] = useState(0);
-  const [isActive, setIsActive] = useState(false);
   const [workDuration, setWorkDuration] = useState(25);
-  const [breakDuration, setBreakDuration] = useState(5);
   const [isWorkPhase, setIsWorkPhase] = useState(true);
+  const [completedWorkSessions, setCompletedWorkSessions] = useState(0);
+
+  //Duration related states
+  const [isActive, setIsActive] = useState(false);
+  const [shortBreakDuration, setShortBreakDuration] = useState(5);
+  const [longBreakDuration, setLongBreakDuration] = useState(15);
+
+  const handleCycleEnd = () => {
+    if (isWorkPhase) {
+      // If it was a work phase, we're now entering break.
+      alert("Work session completed! Time for a break.");
+    } else {
+      // If it was a break phase, we're now entering work.
+      alert("Break is over! Time to get back to work.");
+    }
+  };
 
   // ... Timer logic ...
   useEffect(() => {
     let interval;
-    if (isActive) {
+    if (isActive && (minutes !== 0 || seconds !== 0)) {
       interval = setInterval(() => {
         if (seconds > 0) {
           setSeconds(seconds - 1);
@@ -23,7 +39,7 @@ const PomodoroTimer = () => {
           setIsActive(false);
           // Here, you can transition to the next phase (work/break)
           if (isWorkPhase) {
-            setMinutes(breakDuration);
+            setMinutes(shortBreakDuration);
           } else {
             setMinutes(workDuration);
           }
@@ -38,24 +54,29 @@ const PomodoroTimer = () => {
     }
 
     return () => clearInterval(interval); // This clears the interval when the component is unmounted or if isActive changes
-  }, [isActive, minutes, seconds]);
+  }, [isActive, minutes, seconds, isWorkPhase]);
 
   if (minutes === 0 && seconds === 0) {
     if (isWorkPhase) {
-      setMinutes(breakDuration);
+      setMinutes(shortBreakDuration);
     } else {
       setMinutes(workDuration);
     }
     setIsWorkPhase(!isWorkPhase);
   }
 
-  const handleDurationChange = (newWorkDuration, newBreakDuration) => {
+  const handleDurationChange = (
+    newWorkDuration,
+    newShortBreakDuration,
+    newLongBreakDuration
+  ) => {
     setWorkDuration(newWorkDuration);
-    setBreakDuration(newBreakDuration);
+    setShortBreakDuration(newShortBreakDuration);
+    setLongBreakDuration(newLongBreakDuration);
     if (isWorkPhase) {
       setMinutes(newWorkDuration);
     } else {
-      setMinutes(newBreakDuration);
+      setMinutes(newShortBreakDuration);
     }
   };
 
@@ -68,20 +89,32 @@ const PomodoroTimer = () => {
     if (isWorkPhase) {
       setMinutes(workDuration);
     } else {
-      setMinutes(breakDuration);
+      setMinutes(shortBreakDuration);
     }
     setSeconds(0);
   };
 
   return (
     <View style={styles.container}>
+      <PomodoroCycle
+        minutes={minutes}
+        seconds={seconds}
+        isWorkPhase={isWorkPhase}
+        workDuration={workDuration}
+        shortBreakDuration={shortBreakDuration}
+        longBreakDuration={longBreakDuration}
+        onCycleEnd={handleCycleEnd}
+      />
       <Text>{isWorkPhase ? "Work Phase" : "Break Phase"}</Text>
       <Text style={styles.timerText}>
         {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
       </Text>
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.buttonStartPause} onPress={toggleTimer}>
+        <TouchableOpacity
+          style={styles.buttonStartPause}
+          onPress={() => setIsActive(!isActive)}
+        >
           <Text style={styles.buttonText}>{isActive ? "Pause" : "Start"}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.buttonReset} onPress={resetTimer}>
@@ -91,7 +124,7 @@ const PomodoroTimer = () => {
 
       <TimerSettings
         workDuration={workDuration}
-        breakDuration={breakDuration}
+        breakDuration={shortBreakDuration}
         onDurationChange={handleDurationChange}
       />
     </View>
